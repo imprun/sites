@@ -26,7 +26,7 @@ COPY sites/landing/package.json ./sites/landing/
 # 의존성 설치 (BuildKit 캐시 마운트 활용)
 # pnpm store를 Docker 캐시 레이어에 저장하여 재빌드 시 재사용
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --filter @imprun/landing --frozen-lockfile
+    pnpm install --filter @imprun/landing
 
 # 소스 코드 복사
 COPY sites/landing ./sites/landing
