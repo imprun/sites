@@ -117,21 +117,21 @@ export function NavBar() {
           ))}
         </div>
 
-        {/* CTA Buttons - TODO: Enable when console.imprun.dev is ready */}
-        {/* <div className="hidden md:flex items-center gap-4">
+        {/* CTA Buttons */}
+        <div className="hidden md:flex items-center gap-4">
           <a
-            href="https://console.imprun.dev"
+            href="#" // TODO: https://console.imprun.dev
             className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
           >
             Sign In
           </a>
           <a
-            href="https://console.imprun.dev"
+            href="#" // TODO: https://console.imprun.dev
             className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
           >
             Get Started
           </a>
-        </div> */}
+        </div>
 
         {/* Mobile menu button */}
         <button
@@ -188,21 +188,21 @@ export function NavBar() {
               ))}
             </div>
 
-            {/* CTA - TODO: Enable when console.imprun.dev is ready */}
-            {/* <div className="pt-4 border-t border-slate-200 space-y-2">
+            {/* CTA */}
+            <div className="pt-4 border-t border-slate-200 space-y-2">
               <a
-                href="https://console.imprun.dev"
+                href="#" // TODO: https://console.imprun.dev
                 className="block py-2 text-base font-medium text-slate-600 hover:text-slate-900"
               >
                 Sign In
               </a>
               <a
-                href="https://console.imprun.dev"
+                href="#" // TODO: https://console.imprun.dev
                 className="block px-4 py-2 bg-blue-600 text-white text-base font-semibold rounded-lg hover:bg-blue-700 text-center"
               >
                 Get Started
               </a>
-            </div> */}
+            </div>
           </div>
         </div>
       )}

@@ -21,14 +21,13 @@ export function CTASection() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            {/* TODO: Enable when console.imprun.dev is ready */}
-            {/* <a
-              href="https://console.imprun.dev"
+            <a
+              href="#" // TODO: https://console.imprun.dev
               className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-600 text-lg font-semibold rounded-lg hover:bg-blue-50 transition-colors shadow-lg"
             >
               무료로 시작하기
               <Rocket className="h-5 w-5" />
-            </a> */}
+            </a>
             <a
               href="https://docs.imprun.dev"
               className="inline-flex items-center gap-2 px-8 py-4 bg-transparent text-white text-lg font-semibold rounded-lg border-2 border-white/30 hover:bg-white/10 transition-colors"

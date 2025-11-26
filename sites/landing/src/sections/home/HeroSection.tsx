@@ -80,14 +80,13 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center gap-4"
           >
-            {/* TODO: Enable when console.imprun.dev is ready */}
-            {/* <a
-              href="https://console.imprun.dev"
+            <a
+              href="#" // TODO: https://console.imprun.dev
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-blue-700 transition-colors"
             >
               무료로 시작하기
               <ArrowRight className="h-5 w-5" />
-            </a> */}
+            </a>
             <a
               href="https://docs.imprun.dev"
               className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-6 py-3 text-base font-semibold text-slate-900 hover:bg-slate-200 transition-colors"
