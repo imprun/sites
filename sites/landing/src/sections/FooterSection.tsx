@@ -17,7 +17,7 @@ const footerLinks = {
     { name: 'About', href: '#about' },
     { name: 'Changelog', href: '#' }, // TODO: Replace with actual GitHub releases URL
     { name: 'Community', href: '#' }, // TODO: Replace with actual GitHub discussions URL
-    { name: 'Contact', href: 'mailto:support@imprun.dev' },
+    // { name: 'Contact', href: 'mailto:support@imprun.dev' }, // TODO: Enable when email is ready
   ],
   legal: [
     { name: 'Privacy', href: '#privacy' },

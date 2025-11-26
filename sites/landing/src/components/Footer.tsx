@@ -15,7 +15,7 @@ const footerLinks = {
   ],
   company: [
     { name: 'About', href: '/about' },
-    { name: 'Contact', href: 'mailto:support@imprun.dev' },
+    // { name: 'Contact', href: 'mailto:support@imprun.dev' }, // TODO: Enable when email is ready
     { name: 'Privacy', href: '/privacy' },
     { name: 'Terms', href: '/terms' },
   ],

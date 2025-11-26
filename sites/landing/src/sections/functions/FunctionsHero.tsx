@@ -78,13 +78,14 @@ export function FunctionsHero() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center gap-4"
           >
-            <a
+            {/* TODO: Enable when console.imprun.dev is ready */}
+            {/* <a
               href="https://console.imprun.dev"
               className="inline-flex items-center gap-2 rounded-lg bg-green-500 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-400 transition-colors"
             >
               무료로 시작하기
               <ArrowRight className="h-5 w-5" />
-            </a>
+            </a> */}
             <a
               href="https://docs.imprun.dev/functions"
               className="inline-flex items-center gap-2 rounded-lg bg-white/10 backdrop-blur px-6 py-3 text-base font-semibold text-white border border-white/20 hover:bg-white/20 transition-colors"
