@@ -16,6 +16,7 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # pnpm workspace 설정 파일 복사
+COPY package.json ./
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 
