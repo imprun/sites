@@ -1,0 +1,28 @@
+{
+  "name": "imp-website",
+  "version": "0.1.0",
+  "private": true,
+  "description": "imprun 서비스 웹사이트 모노레포 - 랜딩 및 문서 사이트",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:docs": "pnpm --filter @imprun/docs dev",
+    "dev:landing": "pnpm --filter @imprun/landing dev",
+    "build": "pnpm -r build",
+    "build:docs": "pnpm --filter @imprun/docs build",
+    "build:landing": "pnpm --filter @imprun/landing build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r exec rimraf node_modules dist .next out .turbo",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.5.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

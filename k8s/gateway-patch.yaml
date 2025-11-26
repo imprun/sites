@@ -1,0 +1,92 @@
+# Gateway 리스너 추가를 위한 패치
+# kubectl patch gateway imprun-gateway -n envoy-gateway-system --type='json' -p="$(cat k8s/gateway-patch.yaml)"
+# 또는 기존 Gateway yaml을 직접 수정하여 적용
+
+# 아래는 추가할 리스너 정보 (참고용)
+# imprun-gateway에 다음 리스너들을 추가해야 합니다:
+#
+# - allowedRoutes:
+#     namespaces:
+#       from: All
+#   hostname: 'imprun.dev'
+#   name: https-landing
+#   port: 443
+#   protocol: HTTPS
+#   tls:
+#     certificateRefs:
+#     - group: ""
+#       kind: Secret
+#       name: imprun-dev-tls
+#       namespace: imprun-website
+#     mode: Terminate
+#
+# - allowedRoutes:
+#     namespaces:
+#       from: All
+#   hostname: 'docs.imprun.dev'
+#   name: https-docs
+#   port: 443
+#   protocol: HTTPS
+#   tls:
+#     certificateRefs:
+#     - group: ""
+#       kind: Secret
+#       name: docs-imprun-dev-tls
+#       namespace: imprun-website
+#     mode: Terminate
+
+# JSON patch for kubectl patch
+[
+  {
+    "op": "add",
+    "path": "/spec/listeners/-",
+    "value": {
+      "allowedRoutes": {
+        "namespaces": {
+          "from": "All"
+        }
+      },
+      "hostname": "imprun.dev",
+      "name": "https-landing",
+      "port": 443,
+      "protocol": "HTTPS",
+      "tls": {
+        "certificateRefs": [
+          {
+            "group": "",
+            "kind": "Secret",
+            "name": "imprun-dev-tls",
+            "namespace": "imprun-website"
+          }
+        ],
+        "mode": "Terminate"
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/spec/listeners/-",
+    "value": {
+      "allowedRoutes": {
+        "namespaces": {
+          "from": "All"
+        }
+      },
+      "hostname": "docs.imprun.dev",
+      "name": "https-docs",
+      "port": 443,
+      "protocol": "HTTPS",
+      "tls": {
+        "certificateRefs": [
+          {
+            "group": "",
+            "kind": "Secret",
+            "name": "docs-imprun-dev-tls",
+            "namespace": "imprun-website"
+          }
+        ],
+        "mode": "Terminate"
+      }
+    }
+  }
+]

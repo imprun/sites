@@ -1,0 +1,23 @@
+{
+	"title": "imprun.dev",
+	"description": "imprun Platform 문서",
+	"icon": "Building",
+	"root": true,
+	"pages": [
+		"---시작하기---",
+		"index",
+		"quick-start",
+		"---가이드---",
+		"guides/cli",
+		"---함수 개발---",
+		"functions/request",
+		"functions/response",
+		"functions/fetch",
+		"functions/database",
+		"functions/invoke",
+		"functions/websocket",
+		"functions/env",
+		"---API Reference---",
+		"...(api)"
+	]
+}

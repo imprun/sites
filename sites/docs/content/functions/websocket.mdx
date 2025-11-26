@@ -1,0 +1,262 @@
+---
+title: WebSocket 처리
+description: 클라우드 함수로 WebSocket 연결 처리하기
+icon: Wifi
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+# WebSocket 연결 처리
+
+imprun 함수에서 WebSocket 연결을 처리하는 방법을 소개합니다.
+
+## WebSocket 함수 생성
+
+WebSocket을 처리하려면 `__websocket__`이라는 고정된 이름의 함수를 생성해야 합니다.
+
+<Callout type="warn">
+  WebSocket 함수명은 반드시 `__websocket__`이어야 합니다. 다른 이름은 동작하지 않습니다.
+</Callout>
+
+### 서버 측 구현
+
+다음은 WebSocket을 처리하는 예제 코드입니다:
+
+```typescript
+// functions/__websocket__/index.ts
+import type { FunctionContext } from '@imprun/sdk'
+
+export default async function (ctx: FunctionContext) {
+
+  // 연결 이벤트
+  if (ctx.method === "WebSocket:connection") {
+    ctx.socket.send('연결되었습니다!')
+  }
+
+  // 메시지 수신 이벤트
+  if (ctx.method === 'WebSocket:message') {
+    const { data } = ctx.params
+    console.log('받은 메시지:', data.toString())
+    ctx.socket.send("메시지를 받았습니다");
+  }
+
+  // 에러 이벤트
+  if (ctx.method === 'WebSocket:error') {
+    const error = ctx.params
+    console.error('WebSocket 에러:', error)
+  }
+
+  // 연결 종료 이벤트
+  if (ctx.method === 'WebSocket:close') {
+    const { code, reason } = ctx.params
+    console.log('연결 종료:', code, reason)
+  }
+}
+```
+
+### 클라이언트 연결
+
+WebSocket 클라이언트 예제:
+
+```typescript
+const wss = new WebSocket("wss://your-app.imprun.dev")
+
+wss.onopen = (socket) => {
+  console.log("WebSocket 연결됨")
+  wss.send("안녕하세요")
+};
+
+wss.onmessage = (res) => {
+  console.log("서버로부터 메시지:", res.data);
+};
+
+wss.onclose = () => {
+  console.log("WebSocket 연결 종료");
+}
+
+wss.onerror = (error) => {
+  console.error("WebSocket 에러:", error);
+}
+```
+
+## WebSocket 이벤트
+
+### connection 이벤트
+
+클라이언트가 WebSocket 서버에 연결될 때 발생합니다.
+
+```typescript
+if (ctx.method === "WebSocket:connection") {
+  // 연결된 소켓에 환영 메시지 전송
+  ctx.socket.send(JSON.stringify({
+    type: 'welcome',
+    message: '환영합니다!'
+  }))
+}
+```
+
+### message 이벤트
+
+클라이언트로부터 메시지를 받을 때 발생합니다.
+
+```typescript
+if (ctx.method === 'WebSocket:message') {
+  const { data } = ctx.params
+
+  // 문자열 메시지 처리
+  const message = data.toString()
+  console.log('받은 메시지:', message)
+
+  // 모든 연결된 클라이언트에게 브로드캐스트
+  cloud.sockets.forEach((client) => {
+    if (client.readyState === 1) { // OPEN 상태
+      client.send(message)
+    }
+  })
+}
+```
+
+### error 이벤트
+
+WebSocket 에러가 발생할 때 호출됩니다.
+
+```typescript
+if (ctx.method === 'WebSocket:error') {
+  const error = ctx.params
+  console.error('WebSocket 에러:', error)
+}
+```
+
+### close 이벤트
+
+WebSocket 연결이 종료될 때 호출됩니다.
+
+```typescript
+if (ctx.method === 'WebSocket:close') {
+  const { code, reason } = ctx.params
+  console.log(`연결 종료 - 코드: ${code}, 이유: ${reason}`)
+}
+```
+
+## 실시간 채팅 예제
+
+다음은 간단한 채팅 서버 구현 예제입니다:
+
+```typescript
+import type { FunctionContext } from '@imprun/sdk'
+import cloud from '@imprun/sdk'
+
+export default async function (ctx: FunctionContext) {
+
+  if (ctx.method === "WebSocket:connection") {
+    // 새 사용자 연결 알림
+    broadcast({
+      type: 'system',
+      message: '새로운 사용자가 입장했습니다.',
+      timestamp: new Date().toISOString()
+    })
+  }
+
+  if (ctx.method === 'WebSocket:message') {
+    const { data } = ctx.params
+
+    try {
+      const message = JSON.parse(data.toString())
+
+      // 모든 클라이언트에게 메시지 브로드캐스트
+      broadcast({
+        type: 'chat',
+        user: message.user || 'Anonymous',
+        content: message.content,
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('메시지 파싱 에러:', error)
+    }
+  }
+
+  if (ctx.method === 'WebSocket:close') {
+    // 사용자 퇴장 알림
+    broadcast({
+      type: 'system',
+      message: '사용자가 퇴장했습니다.',
+      timestamp: new Date().toISOString()
+    })
+  }
+}
+
+// 모든 연결된 클라이언트에게 메시지 전송
+function broadcast(message: any) {
+  const data = JSON.stringify(message)
+
+  cloud.sockets.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(data)
+    }
+  })
+}
+```
+
+### 클라이언트 예제
+
+```typescript
+const ws = new WebSocket("wss://your-app.imprun.dev")
+
+ws.onopen = () => {
+  console.log("채팅 서버에 연결되었습니다")
+}
+
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data)
+
+  if (message.type === 'system') {
+    console.log(`[시스템] ${message.message}`)
+  } else if (message.type === 'chat') {
+    console.log(`[${message.user}] ${message.content}`)
+  }
+}
+
+// 메시지 전송
+function sendMessage(user: string, content: string) {
+  ws.send(JSON.stringify({
+    user,
+    content
+  }))
+}
+
+// 사용 예시
+sendMessage('홍길동', '안녕하세요!')
+```
+
+## Cloud SDK를 통한 소켓 관리
+
+`cloud.sockets`를 사용하여 모든 연결된 WebSocket 클라이언트에 접근할 수 있습니다:
+
+```typescript
+import cloud from '@imprun/sdk'
+
+// 연결된 클라이언트 수 확인
+console.log('연결된 클라이언트:', cloud.sockets.size)
+
+// 모든 클라이언트에게 메시지 전송
+cloud.sockets.forEach((socket) => {
+  if (socket.readyState === 1) { // WebSocket.OPEN
+    socket.send('공지사항: 서버 점검 예정')
+  }
+})
+```
+
+## 주의사항
+
+<Callout>
+- WebSocket 함수는 반드시 `__websocket__`라는 이름이어야 합니다
+- `ctx.socket`은 현재 연결된 소켓을 나타냅니다
+- `cloud.sockets`은 모든 연결된 소켓들의 Set입니다
+- WebSocket 상태 확인: `readyState === 1` (OPEN), `0` (CONNECTING), `2` (CLOSING), `3` (CLOSED)
+</Callout>
+
+## 다음 단계
+
+- [HTTP 요청 처리](/functions/request)
+- [HTTP 응답 처리](/functions/response)
+- [MongoDB 사용](/functions/database)

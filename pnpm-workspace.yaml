@@ -1,0 +1,6 @@
+packages:
+  - sites/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@compodoc/compodoc'

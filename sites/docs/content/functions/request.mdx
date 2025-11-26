@@ -1,0 +1,232 @@
+---
+title: HTTP 요청
+description: 클라우드 함수에서 HTTP 요청 처리하기
+icon: ArrowDownToLine
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+# HTTP 요청 처리
+
+클라우드 함수에서 HTTP 요청을 처리하는 방법을 소개합니다.
+
+## 쿼리 파라미터 가져오기
+
+URL 쿼리 파라미터는 `ctx.query`로 접근할 수 있습니다:
+
+```typescript
+import type { FunctionContext } from '@imprun/sdk'
+
+export default async function (ctx: FunctionContext) {
+  const id = ctx.query.id
+  const page = ctx.query.page || '1'
+
+  console.log(`ID: ${id}, Page: ${page}`)
+
+  return { id, page }
+}
+```
+
+**호출 예시:**
+```bash
+curl "https://your-app.imprun.dev/my-function?id=123&page=2"
+```
+
+**응답:**
+```json
+{
+  "id": "123",
+  "page": "2"
+}
+```
+
+<Callout type="info">
+  `ctx.query`는 Object 타입으로, Express.js의 [req.query](https://expressjs.com/en/api.html#req.query)와 동일합니다.
+</Callout>
+
+## 요청 본문 가져오기
+
+POST/PUT 요청의 본문은 `ctx.body`로 접근할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const { name, email } = ctx.body
+
+  console.log(`이름: ${name}, 이메일: ${email}`)
+
+  return {
+    message: `${name}님, 환영합니다!`,
+    email
+  }
+}
+```
+
+**호출 예시:**
+```bash
+curl -X POST https://your-app.imprun.dev/create-user \
+  -H "Content-Type: application/json" \
+  -d '{"name":"홍길동","email":"hong@example.com"}'
+```
+
+<Callout type="info">
+  `ctx.body`는 Object 타입으로, JSON 요청은 자동으로 파싱됩니다. Express.js의 [req.body](https://expressjs.com/en/api.html#req.body)와 동일합니다.
+</Callout>
+
+## HTTP 헤더 가져오기
+
+요청 헤더는 `ctx.headers`로 접근할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const userAgent = ctx.headers['user-agent']
+  const contentType = ctx.headers['content-type']
+  const authorization = ctx.headers['authorization']
+
+  return {
+    userAgent,
+    contentType,
+    authorization
+  }
+}
+```
+
+## 클라이언트 IP 주소 가져오기
+
+프록시를 통해 전달된 실제 클라이언트 IP는 `x-forwarded-for` 헤더에서 가져올 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const ip = ctx.headers['x-forwarded-for'] ||
+             ctx.request.ip ||
+             'unknown'
+
+  return `당신의 IP 주소: ${ip}`
+}
+```
+
+## HTTP 메서드 확인
+
+요청의 HTTP 메서드를 확인할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const method = ctx.method
+
+  if (method === 'GET') {
+    return { message: 'GET 요청입니다' }
+  } else if (method === 'POST') {
+    return { message: 'POST 요청입니다', data: ctx.body }
+  } else {
+    return { message: `${method} 요청입니다` }
+  }
+}
+```
+
+## Request 객체 전체 접근
+
+Express.js의 Request 객체에 직접 접근할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const req = ctx.request
+
+  console.log(req.url)      // 요청 URL
+  console.log(req.path)     // 요청 경로
+  console.log(req.hostname) // 호스트명
+  console.log(req.protocol) // 프로토콜 (http/https)
+
+  return {
+    url: req.url,
+    path: req.path,
+    hostname: req.hostname,
+    protocol: req.protocol,
+    method: req.method
+  }
+}
+```
+
+**출력 예시:**
+```json
+{
+  "url": "/my-function?id=1",
+  "path": "/my-function",
+  "hostname": "your-app.imprun.dev",
+  "protocol": "https",
+  "method": "GET"
+}
+```
+
+<Callout type="info">
+  `ctx.request`는 Express.js의 [Request 객체](https://expressjs.com/en/api.html#req)로, 모든 Express.js Request 메서드와 속성을 사용할 수 있습니다.
+</Callout>
+
+## 파일 업로드 처리
+
+업로드된 파일은 `ctx.files`로 접근할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const files = ctx.files
+
+  if (!files || files.length === 0) {
+    return { error: '파일이 업로드되지 않았습니다' }
+  }
+
+  const uploadedFiles = files.map(file => ({
+    originalName: file.originalname,
+    size: file.size,
+    mimeType: file.mimetype,
+    buffer: file.buffer.length
+  }))
+
+  return {
+    message: '파일 업로드 성공',
+    files: uploadedFiles
+  }
+}
+```
+
+## 쿼리와 본문 통합 처리
+
+쿼리 파라미터와 본문을 동시에 처리하는 패턴:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  // 쿼리 파라미터 우선, 없으면 본문에서 가져오기
+  const id = ctx.query.id || ctx.body?.id
+  const name = ctx.query.name || ctx.body?.name
+
+  if (!id) {
+    return { error: 'ID가 필요합니다' }
+  }
+
+  return {
+    id,
+    name,
+    source: ctx.query.id ? 'query' : 'body'
+  }
+}
+```
+
+## Request ID 추적
+
+각 요청에는 고유한 ID가 자동으로 할당됩니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const requestId = ctx.requestId
+
+  console.log(`요청 ID: ${requestId}`)
+
+  return {
+    requestId,
+    timestamp: new Date().toISOString()
+  }
+}
+```
+
+## 다음 단계
+
+- [HTTP 응답](/functions/response)
+- [외부 API 호출](/functions/fetch)
+- [MongoDB 사용](/functions/database)

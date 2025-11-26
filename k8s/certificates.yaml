@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: imprun-dev-tls
+  namespace: imprun-website
+spec:
+  secretName: imprun-dev-tls
+  issuerRef:
+    name: letsencrypt-cloudflare
+    kind: ClusterIssuer
+  dnsNames:
+    - imprun.dev
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: docs-imprun-dev-tls
+  namespace: imprun-website
+spec:
+  secretName: docs-imprun-dev-tls
+  issuerRef:
+    name: letsencrypt-cloudflare
+    kind: ClusterIssuer
+  dnsNames:
+    - docs.imprun.dev

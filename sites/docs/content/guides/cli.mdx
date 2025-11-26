@@ -1,0 +1,609 @@
+---
+title: CLI 가이드
+description: imprun CLI 명령어 참조 및 사용자 가이드
+icon: Terminal
+---
+
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { Callout } from "fumadocs-ui/components/callout";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
+# imprun CLI 사용자 가이드
+
+## 설치
+
+```bash
+npm install -g @imprun/cli
+```
+
+버전 확인:
+
+```bash
+imprun --version
+```
+
+## 초기 설정
+
+```bash
+# imprun 서버에 로그인
+imprun login
+
+# 서버 주소를 묻습니다 (기본값: http://localhost:3000)
+? Server endpoint: http://your-imprun-server.com
+```
+
+로그인 시 기기 인증 코드가 표시됩니다. 브라우저에서 인증을 완료하면 자동으로 로컬에 토큰이 저장됩니다.
+
+---
+
+## 프로젝트 구조
+
+### 프로젝트 레이아웃
+
+```
+my-app/
+├── .imprunrc              # 프로젝트 설정 파일 (imprun pull로 생성)
+├── functions/             # 모든 함수가 위치하는 디렉토리
+│   ├── hello/
+│   │   ├── index.ts       # 함수 코드 (필수)
+│   │   └── function.yaml  # 함수 메타데이터 (필수)
+│   ├── post-body/
+│   │   ├── index.ts
+│   │   ├── validator.ts   # 다중 파일 함수의 모듈
+│   │   └── function.yaml
+│   └── fetch-api/
+│       ├── index.ts
+│       ├── types.ts
+│       └── function.yaml
+├── .imprun/               # 배포 상태 추적 (자동 생성)
+│   └── manifest.json      # 마지막 배포 해시 저장
+└── functions.yaml         # 생성되는 빌드 아티팩트 (선택적)
+```
+
+### .imprunrc 파일
+
+프로젝트 설정을 정의합니다:
+
+```yaml
+application:
+  id: my-app
+  name: My Application
+
+dev:
+  port: 3000              # 개발 서버 포트
+  watch: true             # 파일 변경 감지
+```
+
+---
+
+## 명령어
+
+### imprun login
+
+imprun 서버에 인증합니다.
+
+```bash
+imprun login
+```
+
+**출력:**
+```
+? Server endpoint: http://localhost:3000
+✓ Visit this URL in your browser to authenticate:
+  https://your-imprun-server.com/auth/device?code=ABC123
+
+✓ Authentication successful!
+✓ Token saved to ~/.imprun/credentials.json
+```
+
+---
+
+### imprun pull [app-name]
+
+기존 imprun 프로젝트를 로컬에 다운로드합니다.
+
+```bash
+# 계정의 첫 번째 앱 다운로드 (app-name 생략 시)
+imprun pull
+
+# 특정 앱 다운로드
+imprun pull my-app
+
+# 새 디렉토리에 다운로드
+imprun pull my-app --dir ./my-project
+```
+
+**생성되는 파일:**
+- `.imprunrc` - 프로젝트 설정
+- `functions/` - 모든 함수 및 메타데이터
+- `.imprun/manifest.json` - 배포 상태
+
+---
+
+### imprun dev
+
+로컬 개발 서버를 시작합니다.
+
+```bash
+imprun dev
+```
+
+**옵션:**
+```bash
+# 특정 포트 사용
+imprun dev --port 3005
+
+# 포트는 .imprunrc의 dev.port로도 설정 가능
+```
+
+**기능:**
+- 로컬 함수 서버 시작 (기본 포트: 3000)
+- 파일 변경 감지 및 자동 리로드
+- 즉시 테스트 가능
+
+**예시:**
+```bash
+$ imprun dev
+✓ Starting dev server on port 3000...
+✓ 📡 Server ready at http://localhost:3000
+
+# 함수 호출 테스트
+$ curl http://localhost:3000/hello
+
+# 서버 종료
+$ Press Ctrl+C
+✓ Dev server stopped
+```
+
+---
+
+### imprun build
+
+함수를 빌드하여 `functions.yaml`을 생성합니다.
+
+```bash
+imprun build
+```
+
+**출력:**
+```
+🔨 Building functions...
+
+✓ hello (1 files)
+✓ post-body (3 files)
+✓ fetch-api (2 files)
+
+✓ Generated: functions.yaml (3 functions, 2.14 KB)
+```
+
+**언제 사용하나요?**
+- 배포 전에 함수 검증
+- 메타데이터 확인
+- 다른 개발자와 `functions.yaml` 공유
+
+---
+
+### imprun deploy [functions...] [options]
+
+함수를 서버에 배포합니다.
+
+#### 전체 함수 배포
+
+```bash
+imprun deploy
+```
+
+**출력:**
+```
+🔨 Scanning functions...
+
+✓ hello (1 files)
+✓ post-body (3 files)
+✓ fetch-api (2 files)
+
+📤 Deploying 3 function(s) to My Application...
+
+✓ hello deployed
+✓ post-body deployed
+✓ fetch-api deployed
+
+✓ Deployment complete! 3 deployed, 0 failed.
+```
+
+#### 특정 함수만 배포
+
+```bash
+imprun deploy hello
+imprun deploy post-body fetch-api
+```
+
+#### 변경된 함수만 배포
+
+```bash
+imprun deploy --changed
+```
+
+이전 배포 이후 변경된 함수만 배포합니다.
+
+**출력:**
+```
+📤 Deploying 2 function(s) to My Application...
+
+✓ post-body deployed
+✓ fetch-api deployed
+
+✓ Deployment complete! 2 deployed, 0 failed.
+```
+
+#### 옵션
+
+| 옵션 | 설명 | 예시 |
+|------|------|------|
+| `[functions...]` | 배포할 함수 이름 (생략 시 전체) | `imprun deploy hello post-body` |
+| `--all` | 명시적으로 전체 함수 배포 | `imprun deploy --all` |
+| `--changed` | 변경된 함수만 배포 | `imprun deploy --changed` |
+
+---
+
+### imprun templates
+
+새 함수를 템플릿으로부터 생성합니다.
+
+```bash
+imprun templates
+```
+
+**대화형 선택:**
+```
+? Select a template:
+  ❯ hello (Simple hello world)
+    echo (Echo request body)
+    math (Simple arithmetic operations)
+    get-query (Handle GET query parameters)
+    post-body (Handle POST with validation)
+    fetch-api (Fetch external API data)
+    error-handling (Structured error handling)
+    request-metadata (Access request metadata)
+    shared-module (Multi-file function example)
+```
+
+**생성되는 파일:**
+선택한 템플릿에 따라 `functions/{template-name}/` 디렉토리 생성:
+- `index.ts` - 함수 코드
+- `function.yaml` - 메타데이터
+- 추가 파일들 (템플릿에 따라 다름)
+
+---
+
+## 함수 메타데이터
+
+### function.yaml 파일
+
+각 함수는 `function.yaml` 파일을 포함해야 합니다. 이 파일은 함수의 메타데이터를 정의합니다.
+
+#### 필수성
+
+| 함수 타입 | function.yaml | 필수 여부 |
+|----------|---------------|---------|
+| Single-file (1개 파일) | 선택사항 | 메타데이터 관리용 권장 |
+| Multi-file (2개 이상) | **필수** | 반드시 포함 |
+
+#### 문법
+
+```yaml
+# functions/my-function/function.yaml
+
+description: "함수 설명"
+methods: [GET, POST]           # HTTP 메서드
+tags: [category1, category2]   # 분류 태그
+```
+
+#### 예시
+
+```yaml
+# Single-file 함수
+description: "사용자 정보 조회"
+methods: [GET]
+tags: [users, profile]
+
+---
+
+# Multi-file 함수
+description: "사용자 데이터 검증 및 저장"
+methods: [POST, PUT]
+tags: [users, validation, database]
+```
+
+### 자동 추론
+
+`function.yaml`이 없으면 다음 기본값을 사용합니다:
+
+```
+description: "Function: {function-name}"
+methods: [GET, POST]
+tags: []
+```
+
+---
+
+## 배포 전략
+
+### 전체 배포 (기본값)
+
+모든 함수를 한 번에 배포합니다.
+
+```bash
+imprun deploy
+```
+
+**언제 사용:**
+- 초기 배포
+- 여러 함수가 함께 변경됨
+- 프로덕션 릴리스
+
+### 개별 함수 배포
+
+특정 함수만 배포합니다.
+
+```bash
+imprun deploy hello post-body
+```
+
+**장점:**
+- 빠른 배포 (작은 함수만)
+- 위험 최소화 (다른 함수 영향 없음)
+- 개발 중 빈번한 배포에 적합
+
+**언제 사용:**
+- 단일 함수 개발 중
+- 버그 수정
+- A/B 테스트
+
+### 변경 감지 배포
+
+마지막 배포 이후 변경된 함수만 배포합니다.
+
+```bash
+imprun deploy --changed
+```
+
+**내부 동작:**
+1. `.imprun/manifest.json`에서 마지막 배포 상태 읽기
+2. 각 함수의 해시 계산 (모든 파일 기준)
+3. 해시가 다르면 "변경됨"으로 판단
+4. 변경된 함수만 배포
+5. 성공 후 manifest 업데이트
+
+---
+
+## 변경 감지
+
+### 배포 매니페스트
+
+`.imprun/manifest.json` 파일에 배포 상태가 저장됩니다.
+
+```json
+{
+  "version": "1.0",
+  "appId": "my-app",
+  "lastDeploy": "2025-11-18T10:30:00Z",
+  "functions": {
+    "hello": {
+      "hash": "abc123def456...",
+      "deployedAt": "2025-11-18T10:30:00Z"
+    },
+    "post-body": {
+      "hash": "xyz789uvw012...",
+      "deployedAt": "2025-11-18T10:30:00Z"
+    }
+  }
+}
+```
+
+### 해시 계산
+
+함수의 모든 파일을 포함하여 SHA-256 해시를 계산합니다:
+
+```
+hash = SHA256(
+  "index.ts:{content}" +
+  "function.yaml:{content}" +
+  "validator.ts:{content}"
+)
+```
+
+**영향을 받는 변경:**
+- 코드 수정
+- function.yaml 메타데이터 변경
+- 파일 이름 변경 (같은 파일이라도)
+
+**영향을 받지 않는 변경:**
+- 주석 추가 (코드 실제 내용 변경 없음)
+- `.imprunrc` 변경
+- 배포 매니페스트 자동 변경
+
+---
+
+## 트러블슈팅
+
+### 문제: "Not logged in" 에러
+
+```
+✗ Not logged in. Run: imprun login
+```
+
+**해결:**
+```bash
+imprun login
+```
+
+자격증명이 `~/.imprun/credentials.json`에 저장됩니다.
+
+---
+
+### 문제: "No .imprunrc found" 에러
+
+```
+✗ No .imprunrc found. Run: imprun pull
+```
+
+**원인:**
+- 프로젝트를 제대로 초기화하지 않음
+- 잘못된 디렉토리에서 명령어 실행
+
+**해결:**
+```bash
+# 올바른 디렉토리에서
+cd /path/to/my-app
+imprun pull my-app
+```
+
+---
+
+### 문제: "function.yaml must include..." 에러
+
+```
+✗ Validation failed: Function post-body: multi-file functions must include function.yaml or openapi.yaml
+```
+
+**원인:**
+다중 파일 함수가 `function.yaml`이나 `openapi.yaml`이 없음
+
+**해결:**
+```bash
+# 함수 디렉토리에 function.yaml 추가
+cat > functions/post-body/function.yaml << 'EOF'
+description: "사용자 데이터 검증"
+methods: [POST]
+tags: [validation]
+EOF
+```
+
+---
+
+### 문제: Dev 서버가 응답하지 않음
+
+```
+✗ Dev server error: Cannot find module './validator'
+```
+
+**원인:**
+상대 경로 import가 잘못됨 (다중 파일 함수)
+
+**해결:**
+```typescript
+// ❌ 잘못된 방식
+import { validateUser } from 'validator'
+
+// ✅ 올바른 방식
+import { validateUser } from './validator'
+```
+
+---
+
+### 문제: Dev 서버 종료가 안 됨
+
+```
+Ctrl+C 눌러도 아무것도 나타나지 않음...
+```
+
+**해결:**
+```bash
+# 강제 종료
+kill -9 $(lsof -t -i:3000)
+
+# 또는 다시 시도
+Ctrl+C Ctrl+C Ctrl+C
+```
+
+---
+
+### 문제: 배포 실패 - "Unauthorized"
+
+```
+✗ Deploy failed: Unauthorized - invalid or expired token
+```
+
+**해결:**
+```bash
+# 다시 로그인
+imprun login
+```
+
+토큰이 만료되었을 수 있습니다.
+
+---
+
+## FAQ
+
+### Q: functions.yaml이 자동 생성되는데, 버전 관리에 포함해야 하나요?
+
+**A:** 선택사항입니다.
+- **포함하는 경우:** 배포 전 검토 가능, CI/CD에 유용
+- **제외하는 경우:** `.gitignore`에 추가
+
+```bash
+echo "functions.yaml" >> .gitignore
+```
+
+---
+
+### Q: 여러 개발자가 함수를 개발할 때 충돌을 어떻게 처리하나요?
+
+**A:** 함수 단위로 배포하므로 다른 함수는 영향을 받지 않습니다.
+
+```bash
+# 개발자 A: hello 함수 배포
+imprun deploy hello
+
+# 개발자 B: post-body 함수 배포 (동시에 가능)
+imprun deploy post-body
+
+# 충돌 없음!
+```
+
+---
+
+### Q: 배포 후 이전 버전으로 롤백할 수 있나요?
+
+**A:** 현재 이전 코드를 다시 배포하면 됩니다.
+
+```bash
+# 이전 코드로 복구
+git checkout main -- functions/hello/index.ts
+
+# 다시 배포
+imprun deploy hello
+```
+
+---
+
+### Q: 프로덕션 환경과 스테이징 환경을 분리할 수 있나요?
+
+**A:** 다른 `.imprunrc` 파일을 사용하면 됩니다.
+
+```bash
+# 스테이징 배포
+IMPRUNRC=.imprunrc.staging imprun deploy
+
+# 또는 디렉토리 분리
+cd staging/
+imprun pull staging-app
+imprun deploy
+```
+
+---
+
+### Q: 함수 실행 로그를 볼 수 있나요?
+
+**A:** 개발 서버에서는 콘솔에 출력됩니다.
+
+```bash
+imprun dev
+
+# 함수 호출 시 로그 출력
+curl http://localhost:3000/hello
+# 콘솔에 함수 로그 표시
+```
+
+프로덕션 로그는 imprun 웹 콘솔에서 확인할 수 있습니다.

@@ -1,0 +1,441 @@
+---
+title: MongoDB 사용
+description: 클라우드 함수에서 MongoDB 데이터베이스 사용하기
+icon: Database
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+# MongoDB 사용
+
+imprun 함수에서 MongoDB 데이터베이스를 사용하는 방법을 소개합니다.
+
+## Cloud SDK를 통한 데이터베이스 접근
+
+imprun은 MongoDB 데이터베이스에 접근할 수 있는 두 가지 방법을 제공합니다:
+
+1. **cloud.database()** - 고수준 Database API (권장)
+2. **cloud.mongo** - 원시 MongoDB 드라이버
+
+## Database API 사용 (권장)
+
+`cloud.database()`를 사용하면 간편하게 데이터베이스를 조작할 수 있습니다:
+
+```typescript
+import cloud from '@imprun/sdk'
+import type { FunctionContext } from '@imprun/sdk'
+
+export default async function (ctx: FunctionContext) {
+  const db = cloud.database()
+
+  // 사용자 추가
+  const result = await db.collection('users').add({
+    name: '홍길동',
+    email: 'hong@example.com',
+    createdAt: new Date()
+  })
+
+  return {
+    success: true,
+    id: result.id
+  }
+}
+```
+
+### 문서 조회
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.database()
+
+  // 단일 문서 조회
+  const user = await db.collection('users')
+    .where({ email: 'hong@example.com' })
+    .getOne()
+
+  // 여러 문서 조회
+  const users = await db.collection('users')
+    .where({ active: true })
+    .get()
+
+  return {
+    user,
+    users: users.data,
+    total: users.total
+  }
+}
+```
+
+### 문서 업데이트
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.database()
+  const { userId, name } = ctx.body
+
+  // 단일 문서 업데이트
+  const result = await db.collection('users')
+    .where({ _id: userId })
+    .update({
+      name,
+      updatedAt: new Date()
+    })
+
+  return {
+    success: true,
+    updated: result.updated
+  }
+}
+```
+
+### 문서 삭제
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.database()
+  const { userId } = ctx.body
+
+  // 단일 문서 삭제
+  const result = await db.collection('users')
+    .where({ _id: userId })
+    .remove()
+
+  return {
+    success: true,
+    deleted: result.deleted
+  }
+}
+```
+
+## MongoDB 드라이버 직접 사용
+
+더 세밀한 제어가 필요한 경우 MongoDB 드라이버를 직접 사용할 수 있습니다:
+
+```typescript
+import cloud from '@imprun/sdk'
+import type { FunctionContext } from '@imprun/sdk'
+
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+
+  // 컬렉션 가져오기
+  const users = db.collection('users')
+
+  // 문서 삽입
+  const result = await users.insertOne({
+    name: '홍길동',
+    email: 'hong@example.com',
+    age: 30,
+    createdAt: new Date()
+  })
+
+  return {
+    success: true,
+    insertedId: result.insertedId
+  }
+}
+```
+
+### Find 쿼리
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+  const users = db.collection('users')
+
+  // 모든 사용자 조회
+  const allUsers = await users.find({}).toArray()
+
+  // 조건부 조회
+  const activeUsers = await users.find({
+    active: true,
+    age: { $gte: 18 }
+  }).toArray()
+
+  // 정렬 및 제한
+  const recentUsers = await users
+    .find({})
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .toArray()
+
+  return {
+    total: allUsers.length,
+    active: activeUsers.length,
+    recent: recentUsers
+  }
+}
+```
+
+### Aggregation
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+  const orders = db.collection('orders')
+
+  // 집계 파이프라인
+  const stats = await orders.aggregate([
+    {
+      $match: {
+        status: 'completed',
+        createdAt: { $gte: new Date('2025-01-01') }
+      }
+    },
+    {
+      $group: {
+        _id: '$userId',
+        totalSpent: { $sum: '$amount' },
+        orderCount: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { totalSpent: -1 }
+    },
+    {
+      $limit: 10
+    }
+  ]).toArray()
+
+  return {
+    topCustomers: stats
+  }
+}
+```
+
+### Update 연산
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+  const users = db.collection('users')
+
+  // 단일 문서 업데이트
+  await users.updateOne(
+    { email: 'hong@example.com' },
+    {
+      $set: { lastLogin: new Date() },
+      $inc: { loginCount: 1 }
+    }
+  )
+
+  // 여러 문서 업데이트
+  await users.updateMany(
+    { active: false },
+    { $set: { status: 'inactive' } }
+  )
+
+  // Upsert (없으면 생성)
+  await users.updateOne(
+    { email: 'new@example.com' },
+    {
+      $set: {
+        name: '새 사용자',
+        createdAt: new Date()
+      }
+    },
+    { upsert: true }
+  )
+
+  return { success: true }
+}
+```
+
+### Delete 연산
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+  const users = db.collection('users')
+
+  // 단일 문서 삭제
+  await users.deleteOne({ email: 'hong@example.com' })
+
+  // 여러 문서 삭제
+  await users.deleteMany({ active: false })
+
+  return { success: true }
+}
+```
+
+## 인덱스 관리
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+  const users = db.collection('users')
+
+  // 단일 필드 인덱스 생성
+  await users.createIndex({ email: 1 }, { unique: true })
+
+  // 복합 인덱스 생성
+  await users.createIndex({ name: 1, createdAt: -1 })
+
+  // 텍스트 인덱스
+  await users.createIndex({ bio: 'text' })
+
+  // 인덱스 목록 조회
+  const indexes = await users.listIndexes().toArray()
+
+  return { indexes }
+}
+```
+
+## 트랜잭션
+
+여러 작업을 원자적으로 실행할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const client = cloud.mongo.client
+  const db = cloud.mongo.db
+
+  const session = client.startSession()
+
+  try {
+    await session.withTransaction(async () => {
+      const users = db.collection('users')
+      const orders = db.collection('orders')
+
+      // 사용자 포인트 차감
+      await users.updateOne(
+        { _id: ctx.body.userId },
+        { $inc: { points: -100 } },
+        { session }
+      )
+
+      // 주문 생성
+      await orders.insertOne(
+        {
+          userId: ctx.body.userId,
+          amount: 100,
+          status: 'pending',
+          createdAt: new Date()
+        },
+        { session }
+      )
+    })
+
+    return { success: true }
+
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    }
+  } finally {
+    await session.endSession()
+  }
+}
+```
+
+## 페이지네이션
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+  const users = db.collection('users')
+
+  const page = parseInt(ctx.query.page || '1')
+  const limit = parseInt(ctx.query.limit || '20')
+  const skip = (page - 1) * limit
+
+  const [data, total] = await Promise.all([
+    users.find({})
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray(),
+    users.countDocuments({})
+  ])
+
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  }
+}
+```
+
+## 전문 검색 (Text Search)
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+  const posts = db.collection('posts')
+
+  // 텍스트 인덱스 생성 (최초 1회만)
+  await posts.createIndex({ title: 'text', content: 'text' })
+
+  // 텍스트 검색
+  const searchQuery = ctx.query.q || ''
+  const results = await posts.find({
+    $text: { $search: searchQuery }
+  }).toArray()
+
+  return {
+    query: searchQuery,
+    results
+  }
+}
+```
+
+## Change Streams (실시간 변경 감지)
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const db = cloud.mongo.db
+  const users = db.collection('users')
+
+  // Change Stream 생성
+  const changeStream = users.watch()
+
+  changeStream.on('change', (change) => {
+    console.log('데이터 변경 감지:', change)
+
+    // WebSocket으로 클라이언트에 알림
+    cloud.sockets.forEach((socket) => {
+      if (socket.readyState === 1) {
+        socket.send(JSON.stringify({
+          type: 'db-change',
+          data: change
+        }))
+      }
+    })
+  })
+
+  return { message: 'Change Stream 시작됨' }
+}
+```
+
+## 환경 변수로 DB URI 관리
+
+데이터베이스 연결 URI는 환경 변수에서 가져옵니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  // DB URI는 자동으로 설정됨
+  const dbUri = process.env.DB_URI
+
+  console.log('DB URI:', dbUri)
+
+  return {
+    connected: !!cloud.mongo.db,
+    uri: dbUri?.replace(/\/\/(.+):(.+)@/, '//$1:****@') // 비밀번호 숨김
+  }
+}
+```
+
+<Callout>
+  MongoDB에 대한 더 자세한 내용은 [MongoDB 공식 문서](https://www.mongodb.com/docs/drivers/node/current/)를 참고하세요.
+</Callout>
+
+## 다음 단계
+
+- [함수 간 호출](/functions/invoke)
+- [환경 변수](/functions/env)
+- [WebSocket 처리](/functions/websocket)

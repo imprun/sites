@@ -1,0 +1,29 @@
+# ReferenceGrant: imprun-website -> envoy-gateway-system Gateway 참조 허용
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-website-to-gateway
+  namespace: envoy-gateway-system
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: imprun-website
+  to:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+---
+# ReferenceGrant: envoy-gateway-system Gateway -> imprun-website Secret 참조 허용
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gateway-to-website-secrets
+  namespace: imprun-website
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: envoy-gateway-system
+  to:
+    - group: ""
+      kind: Secret

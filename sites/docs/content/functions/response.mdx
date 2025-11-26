@@ -1,0 +1,316 @@
+---
+title: HTTP 응답
+description: 클라우드 함수에서 HTTP 응답 반환하기
+icon: ArrowUpFromLine
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+# HTTP 응답 처리
+
+클라우드 함수에서 다양한 형태의 HTTP 응답을 반환하는 방법을 소개합니다.
+
+## 문자열 반환
+
+가장 간단한 형태의 응답입니다:
+
+```typescript
+import type { FunctionContext } from '@imprun/sdk'
+
+export default async function (ctx: FunctionContext) {
+  return 'Hello, World!'
+}
+```
+
+## JSON 반환
+
+객체를 반환하면 자동으로 JSON으로 변환됩니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  return {
+    code: 0,
+    message: 'success',
+    data: {
+      user: 'imprun',
+      timestamp: new Date().toISOString()
+    }
+  }
+}
+```
+
+**응답:**
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "user": "imprun",
+    "timestamp": "2025-11-18T10:00:00.000Z"
+  }
+}
+```
+
+## HTML 반환
+
+HTML 페이지를 반환할 때는 Content-Type 헤더를 설정합니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  ctx.response.setHeader('Content-Type', 'text/html; charset=utf-8')
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>imprun</title>
+      </head>
+      <body>
+        <h1>Hello, imprun!</h1>
+        <p>현재 시각: ${new Date().toLocaleString('ko-KR')}</p>
+      </body>
+    </html>
+  `
+}
+```
+
+## HTTP 상태 코드 설정
+
+응답 상태 코드를 명시적으로 설정할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const { id } = ctx.query
+
+  if (!id) {
+    ctx.response.status(400)
+    return { error: 'ID가 필요합니다' }
+  }
+
+  // 리소스를 찾을 수 없는 경우
+  ctx.response.status(404)
+  return { error: 'Not Found' }
+}
+```
+
+**일반적인 상태 코드:**
+- `200` - OK (성공)
+- `201` - Created (생성됨)
+- `400` - Bad Request (잘못된 요청)
+- `401` - Unauthorized (인증 필요)
+- `403` - Forbidden (접근 금지)
+- `404` - Not Found (찾을 수 없음)
+- `500` - Internal Server Error (서버 오류)
+
+## 리다이렉트
+
+다른 URL로 리다이렉트할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  // 영구 리다이렉트 (301)
+  ctx.response.redirect(301, 'https://imprun.dev')
+
+  // 임시 리다이렉트 (302, 기본값)
+  ctx.response.redirect('https://imprun.dev')
+}
+```
+
+## 헤더 설정
+
+응답 헤더를 커스터마이징할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  // 단일 헤더 설정
+  ctx.response.setHeader('X-Custom-Header', 'imprun')
+
+  // CORS 헤더 설정
+  ctx.response.setHeader('Access-Control-Allow-Origin', '*')
+  ctx.response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+
+  // 캐시 제어
+  ctx.response.setHeader('Cache-Control', 'public, max-age=3600')
+
+  return { message: '커스텀 헤더가 설정되었습니다' }
+}
+```
+
+## 쿠키 설정
+
+응답에 쿠키를 포함할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  // 기본 쿠키 설정
+  ctx.response.cookie('session_id', 'abc123')
+
+  // 옵션이 있는 쿠키 설정
+  ctx.response.cookie('user_pref', 'dark-mode', {
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict'
+  })
+
+  return { message: '쿠키가 설정되었습니다' }
+}
+```
+
+## 스트림 응답
+
+대용량 데이터나 실시간 데이터를 스트림으로 전송할 수 있습니다:
+
+```typescript
+import { createReadStream } from 'node:fs'
+import type { FunctionContext } from '@imprun/sdk'
+
+export default async function (ctx: FunctionContext) {
+  const response = ctx.response
+
+  // 청크 인코딩 활성화
+  response.chunkedEncoding = true
+
+  // 파일 스트림 생성
+  const stream = createReadStream('large-file.json')
+
+  stream.on('data', chunk => {
+    response.write(chunk)
+  })
+
+  stream.on('end', () => {
+    response.end()
+  })
+
+  stream.on('error', error => {
+    console.error('스트림 에러:', error)
+    response.status(500).end()
+  })
+}
+```
+
+## Server-Sent Events (SSE)
+
+실시간 이벤트 스트리밍:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const response = ctx.response
+
+  // SSE 헤더 설정
+  response.setHeader('Content-Type', 'text/event-stream')
+  response.setHeader('Cache-Control', 'no-cache')
+  response.setHeader('Connection', 'keep-alive')
+
+  // 주기적으로 이벤트 전송
+  let count = 0
+  const interval = setInterval(() => {
+    response.write(`data: ${JSON.stringify({
+      count: ++count,
+      timestamp: new Date().toISOString()
+    })}\n\n`)
+
+    if (count >= 10) {
+      clearInterval(interval)
+      response.end()
+    }
+  }, 1000)
+
+  // 클라이언트 연결 종료 시 정리
+  ctx.request.on('close', () => {
+    clearInterval(interval)
+  })
+}
+```
+
+**클라이언트 코드:**
+```javascript
+const eventSource = new EventSource('https://your-app.imprun.dev/sse')
+
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data)
+  console.log('받은 데이터:', data)
+}
+```
+
+## 파일 다운로드
+
+파일을 다운로드 가능하도록 응답을 설정할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const data = JSON.stringify({
+    users: ['user1', 'user2', 'user3']
+  }, null, 2)
+
+  // 파일 다운로드 헤더 설정
+  ctx.response.setHeader('Content-Type', 'application/json')
+  ctx.response.setHeader('Content-Disposition', 'attachment; filename="users.json"')
+
+  return data
+}
+```
+
+## Response 객체 직접 사용
+
+Express.js Response 객체의 모든 메서드를 사용할 수 있습니다:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  const res = ctx.response
+
+  // 여러 메서드 체이닝
+  res
+    .status(200)
+    .setHeader('X-Powered-By', 'imprun')
+    .json({
+      success: true,
+      data: { message: 'Hello!' }
+    })
+}
+```
+
+<Callout type="info">
+  `ctx.response`는 Express.js의 [Response 객체](https://expressjs.com/en/api.html#res)로, 모든 Express.js Response 메서드를 사용할 수 있습니다.
+</Callout>
+
+## 에러 응답 패턴
+
+일관된 에러 응답 형식:
+
+```typescript
+export default async function (ctx: FunctionContext) {
+  try {
+    const { id } = ctx.query
+
+    if (!id) {
+      ctx.response.status(400)
+      return {
+        error: 'BadRequest',
+        message: 'ID 파라미터가 필요합니다',
+        requestId: ctx.requestId
+      }
+    }
+
+    // 비즈니스 로직...
+
+    return {
+      success: true,
+      data: { id }
+    }
+  } catch (error) {
+    ctx.response.status(500)
+    return {
+      error: 'InternalServerError',
+      message: '서버 오류가 발생했습니다',
+      requestId: ctx.requestId
+    }
+  }
+}
+```
+
+## 다음 단계
+
+- [HTTP 요청](/functions/request)
+- [외부 API 호출](/functions/fetch)
+- [MongoDB 사용](/functions/database)
