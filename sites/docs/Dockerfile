@@ -23,9 +23,8 @@ COPY pnpm-lock.yaml ./
 # docs의 package.json 복사
 COPY sites/docs/package.json ./sites/docs/
 
-# 의존성 설치 (BuildKit 캐시 마운트 활용)
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --filter @imprun/docs
+# 의존성 설치
+RUN pnpm install --filter @imprun/docs
 
 # 소스 코드 복사
 COPY sites/docs ./sites/docs
